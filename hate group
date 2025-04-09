@@ -1,0 +1,94 @@
+import pandas as pd
+from psaw import PushshiftAPI
+import datetime as dt
+import os
+import json
+import subprocess
+import praw
+
+# ---- CONFIG ----
+start_date = "2024-01-01"
+end_date = "2024-01-10"
+search_terms = ["migrant", "jew", "muslim", "black", "gay", "trans"]
+target_groups = {
+    "migrants": ["migrant", "refugee", "illegals"],
+    "Jews": ["jew", "zionist"],
+    "Muslims": ["muslim", "islamist", "jihadi"],
+    "Black": ["black", "african"],
+    "LGBTQ+": ["gay", "trans", "lgbt", "queer"]
+} #you can change the targeted groups and the words to include more esoteric or coded words
+
+# ---- HELPERS ----
+def identify_target_group(text):
+    hits = []
+    for group, keywords in target_groups.items():
+        if any(kw in text.lower() for kw in keywords):
+            hits.append(group)
+    return hits
+
+# ---- REDDIT DATA ----
+#you must access Reddit's API there preferences then go to apps and create another app
+  #you will be prompted to enter a name and use this redirect uri: http://localhost:8080
+# Fill in your credentials here
+REDDIT_CLIENT_ID = "m5dfWd8WO5Vq_czCg9RY6Q" #this is your secret ID found under your name 
+REDDIT_CLIENT_SECRET = "XieF81nOJyVSMwU8R_oHFjI6E044tQ" #this is your secret code given to you 
+REDDIT_USER_AGENT = "hate-network/0.1 by u/yourusername"
+#the API is called praw
+reddit = praw.Reddit(client_id=REDDIT_CLIENT_ID,
+                     client_secret=REDDIT_CLIENT_SECRET,
+                     user_agent=REDDIT_USER_AGENT)
+#this code will begin scraping the data frm the API
+def fetch_reddit_comments(limit=100):
+    results = []
+    for subreddit_name in ["politics", "news", "worldnews"]:
+        subreddit = reddit.subreddit(subreddit_name)
+        for comment in subreddit.comments(limit=limit):
+            text = comment.body
+            author = comment.author.name if comment.author else "[deleted]"
+            groups = identify_target_group(text)
+            for g in groups:
+                results.append({
+                    "user": author,
+                    "group_targeted": g,
+                    "platform": "Reddit",
+                    "text": text
+                })
+    return results
+#I used snscrape to scrape data from twitter but I recommend trying to access Twitter's API - I dont know if ELon deleted it
+# ---- TWITTER DATA ----
+def fetch_twitter_data(limit=100):
+    filename = "tweets.json"
+    query = f'({" OR ".join(search_terms)}) lang:en since:{start_date} until:{end_date}'
+
+    subprocess.run(
+        f'snscrape --jsonl --max-results {limit} twitter-search "{query}" > {filename}',
+        shell=True,
+    )
+
+    results = []
+    with open(filename, "r") as f:
+        for line in f:
+            tweet = json.loads(line)
+            text = tweet.get("content", "")
+            user = tweet.get("user", {}).get("username", "")
+            groups = identify_target_group(text)
+            for g in groups:
+                results.append({
+                    "user": user,
+                    "group_targeted": g,
+                    "platform": "Twitter",
+                    "text": text
+                })
+
+    os.remove(filename)
+    return results
+
+# ---- RUN THE PIPELINE ----
+if __name__ == "__main__":
+    reddit_data = fetch_reddit_comments(limit=100)
+    twitter_data = fetch_twitter_data(limit=100)
+
+    all_data = reddit_data + twitter_data
+    df = pd.DataFrame(all_data)
+    df.to_csv("user_group_bipartite.csv", index=False)
+    print("✅ Data saved to 'user_group_bipartite.csv'")
