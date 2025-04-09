@@ -1,0 +1,41 @@
+import pandas as pd
+import networkx as nx
+import matplotlib.pyplot as plt
+
+# Load the CSV with the user-group data
+df = pd.read_csv("user_group_bipartite.csv")
+
+# Create an empty bipartite graph
+B = nx.Graph()
+
+# Add nodes with the bipartite attribute (users and groups)
+users = set(df['user'])
+groups = set(df['group_targeted'])
+B.add_nodes_from(users, bipartite=0)  # Users are in set 0
+B.add_nodes_from(groups, bipartite=1)  # Groups are in set 1
+
+# Add edges from the CSV data (user -> group)
+for _, row in df.iterrows():
+    B.add_edge(row['user'], row['group_targeted'], platform=row['platform'])
+
+# Visualizing the graph
+plt.figure(figsize=(12, 12))
+pos = nx.spring_layout(B, k=0.5, seed=42)  # Layout for better spread
+
+# Nodes by bipartite set (users left, groups right)
+nx.draw_networkx_nodes(B, pos, nodelist=users, node_color="skyblue", node_size=500, label="Users")
+nx.draw_networkx_nodes(B, pos, nodelist=groups, node_color="lightgreen", node_size=500, label="Groups")
+
+# Edges (posts connecting users and groups)
+nx.draw_networkx_edges(B, pos, edgelist=B.edges(), width=2, alpha=0.5, edge_color="gray")
+
+# Labels for nodes
+nx.draw_networkx_labels(B, pos, font_size=10, font_color="black")
+
+plt.title("User-Group Bipartite Graph of Hate Speech")
+plt.axis("off")  # Hide axes
+plt.show()
+
+# Save the graph to a GEXF file for further analysis
+nx.write_gexf(B, "user_group_bipartite_graph.gexf")
+print("✅ Graph saved as 'user_group_bipartite_graph.gexf'")
