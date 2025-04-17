@@ -30,8 +30,8 @@ def identify_target_group(text):
 #you must access Reddit's API there preferences then go to apps and create another app
   #you will be prompted to enter a name and use this redirect uri: http://localhost:8080
 # Fill in your credentials here
-REDDIT_CLIENT_ID = "m5dfWd8WO5Vq_czCg9RY6Q" #this is your secret ID found under your name 
-REDDIT_CLIENT_SECRET = "XieF81nOJyVSMwU8R_oHFjI6E044tQ" #this is your secret code given to you 
+REDDIT_CLIENT_ID = "your_ID" #this is your secret ID found under your name 
+REDDIT_CLIENT_SECRET = "your_code" #this is your secret code given to you 
 REDDIT_USER_AGENT = "hate-network/0.1 by u/yourusername"
 #the API is called praw
 reddit = praw.Reddit(client_id=REDDIT_CLIENT_ID,
